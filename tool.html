@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>画像並び替えツール</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif; background:#f8f9fa; margin:20px; }
+    .header { margin-bottom: 12px; }
+    .help { font-size: 0.9rem; opacity: 0.7; margin-bottom: 10px; }
+    .controls { margin-bottom: 12px; }
+    .gallery-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+      gap: 16px; 
+    }
+    .image-item {
+      position: relative;
+      background:#fff;
+      border:2px solid transparent;
+      border-radius:10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+      cursor: move;
+      transition: border-color 0.2s;
+    }
+    .image-item.selected {
+      border-color:#e67e22;
+      box-shadow: 0 0 0 3px rgba(230,126,34,0.25);
+    }
+    .image-viewport {
+      width: 100%;
+      height: 240px;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      user-select: none;
+    }
+    .image-viewport img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .image-info {
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      color: #2c3e50;
+      word-break: break-all;
+    }
+    .image-order {
+      display: inline-block;
+      background: #3498db;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .controls button {
+      margin-right: 10px;
+      padding: 8px 14px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .controls label {
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 18px;
+    }
+    .progress {
+      height: 4px;
+      background: #ecf0f1;
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+      margin-top: 10px;
+    }
+    .progress .bar {
+      height: 100%;
+      width: 0%;
+      background: #27ae60;
+      transition: width 0.2s;
+    }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <div class="header">
+    <h1>🖼️ 画像並び替えツール</h1>
+    <div class="help">Ctrl/クリックで複数選択、Shift/クリックで範囲選択、Deleteで削除、スライダーでサイズ変更</div>
+  </div>
+
+  <div class="controls">
+    <input type="file" id="fileInput" class="file-input" multiple accept="image/*" style="display:none;" />
+    <label for="fileInput">📁 画像ファイルを追加選択</label>
+    <br><br>
+
+    <label for="sizeSlider"><strong>画像表示高さ:</strong></label>
+    <input type="range" id="sizeSlider" min="120" max="640" value="240" />
+    <span id="sizeValue">240px</span>
+    <br><br>
+
+    <button id="saveBtn" disabled>💾 並び替えて保存</button>
+    <button id="deleteBtn" disabled>🗑️ 選択画像を削除</button>
+    <button id="resetBtn" disabled>🔄 全てリセット</button>
+    <button id="logoutBtn" style="float:right;">ログアウト</button>
+
+    <div class="progress" id="progress">
+      <div class="bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <div class="gallery-grid" id="galleryGrid">
+    画像ファイルを選択してください
+  </div>
+
+  <script>
+    // ---------- Firebase設定 ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
+      authDomain: "image-sorter-5a77d.firebaseapp.com",
+      projectId: "image-sorter-5a77d",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // ---------- 認証チェック ----------
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert('ログインしてください');
+        window.location.href = "index.html"; // ログインページに戻る
+      }
+    });
+
+    // ---------- ログアウト ----------
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      auth.signOut().then(() => window.location.href = "index.html");
+    });
+
+    // ---------- 画像並び替えツール機能 ----------
+
+    let images = [];
+    let selectedIds = new Set();
+    let draggedElement = null;
+    let dragSourceIds = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const galleryGrid = document.getElementById('galleryGrid');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeValue = document.getElementById('sizeValue');
+    const saveBtn = document.getElementById('saveBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+
+    // ファイル追加選択時
+    fileInput.addEventListener('change', e => {
+      const newFiles = Array.from(e.target.files);
+
+      // 重複チェック（ファイル名＋サイズ）
+      const existingKeys = new Set(images.map(img => img.name + '_' + img.size));
+      const filteredFiles = newFiles.filter(f => !existingKeys.has(f.name + '_' + f.size));
+
+      filteredFiles.forEach((file, i) => {
+        images.push({
+          file: file,
+          name: file.name,
+          size: file.size,
+          id: `img-${Date.now()}-${images.length + i}`,
+          url: URL.createObjectURL(file),
+          type: file.type
+        });
+      });
+
+      fileInput.value = ''; // 入力のクリア
+      renderGallery();
+      updateButtons();
+    });
+
+    // ギャラリー描画
+    function renderGallery() {
+      if (images.length === 0) {
+        galleryGrid.textContent = '画像ファイルを選択してください';
+        saveBtn.disabled = true;
+        deleteBtn.disabled = true;
+        resetBtn.disabled = true;
+        return;
+      }
+
+      galleryGrid.innerHTML = images.map((img, idx) => `
+        <div class="image-item" data-id="${img.id}" draggable="true">
+          <div class="image-viewport">
+            <img src="${img.url}" alt="${img.name}" style="height:${sizeSlider.value}px;" />
+          </div>
+          <div class="image-info">${img.name} (${Math.round(img.size / 1024)} KB)</div>
+          <div class="image-order">順番: ${idx + 1}</div>
+        </div>
+      `).join('');
+
+      setupDragAndDrop();
+      updateButtons();
+    }
+
+    // ドラッグ＆ドロップ設定
+    function setupDragAndDrop() {
+      document.querySelectorAll('.image-item').forEach(item => {
+        item.addEventListener('dragstart', onDragStart);
+        item.addEventListener('dragover', onDragOver);
+        item.addEventListener('drop', onDrop);
+        item.addEventListener('dragend', onDragEnd);
+        item.addEventListener('click', onClickImage);
+      });
+    }
+
+    function onDragStart(e) {
+      draggedElement = this;
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.classList.add('drag-over');
+    }
+
+    function onDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      if (this === draggedElement) return;
+
+      const draggingId = draggedElement.dataset.id;
+      const droppedId = this.dataset.id;
+
+      const draggingIndex = images.findIndex(i => i.id === draggingId);
+      const droppedIndex = images.findIndex(i => i.id === droppedId);
+
+      const draggedImage = images.splice(draggingIndex, 1)[0];
+      images.splice(droppedIndex, 0, draggedImage);
+
+      renderGallery();
+    }
+
+    function onDragEnd(e) {
+      document.querySelectorAll('.image-item').forEach(i => i.classList.remove('drag-over'));
+    }
+
+    // 画像クリックで選択（Ctrl/Shift追加選択に対応する簡易版）
+
+    function onClickImage(e) {
+      const id = e.currentTarget.dataset.id;
+      if (e.ctrlKey || e.metaKey) {
+        if (selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+      } else if (e.shiftKey && selectedIds.size) {
+        const arr = Array.from(selectedIds);
+        const lastSelectedId = arr[arr.length - 1];
+        const lastIndex = images.findIndex(i => i.id === lastSelectedId);
+        const currentIndex = images.findIndex(i => i.id === id);
+
+        const [start, end] = lastIndex < currentIndex ? [lastIndex, currentIndex] : [currentIndex, lastIndex];
+        for (let i = start; i <= end; i++) selectedIds.add(images[i].id);
+      } else {
+        selectedIds.clear();
+        selectedIds.add(id);
+      }
+      updateButtons();
+      renderSelection();
+    }
+
+    function renderSelection() {
+      document.querySelectorAll('.image-item').forEach(item => {
+        if (selectedIds.has(item.dataset.id)) {
+          item.classList.add('selected');
+        } else {
+          item.classList.remove('selected');
+        }
+      });
+    }
+
+    // ボタン状態更新
+    function updateButtons() {
+      saveBtn.disabled = images.length === 0;
+      deleteBtn.disabled = selectedIds.size === 0;
+      resetBtn.disabled = images.length === 0;
+    }
+
+    // スライダーで画像高さ変更
+    sizeSlider.addEventListener('input', () => {
+      sizeValue.textContent = sizeSlider.value + 'px';
+      document.querySelectorAll('.image-item img').forEach(img => {
+        img.style.height = sizeSlider.value + 'px';
+      });
+    });
+
+    // 選択画像削除
+    deleteBtn.addEventListener('click', () => {
+      if (!confirm(`選択された${selectedIds.size}個の画像を削除しますか？`)) return;
+      images = images.filter(img => !selectedIds.has(img.id));
+      selectedIds.clear();
+      renderGallery();
+    });
+
+    // 全リセット
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('全ての画像をリセットしますか？')) return;
+      images.forEach(img => {
+        URL.revokeObjectURL(img.url);
+      });
+      images = [];
+      selectedIds.clear();
+      renderGallery();
+    });
+
+    // 並び替えた画像をZIPに保存（簡易版）
+    saveBtn.addEventListener('click', async () => {
+      alert('ここにZIP保存処理を実装してください（省略）');
+    });
+
+    // 初期描画
+    renderGallery();
+  </script>
+</body>
+</html>
