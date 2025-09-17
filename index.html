@@ -207,11 +207,14 @@ onAuthStateChanged(auth, async (user) => {
   location.href = 'tool.html';
 });
 
+    // ログイン成功直後
+history.replaceState({}, "", "/app"); // 表示URLだけを /app に変更（リロードなし）
 
     
   </script>
 </body>
 </html>
+
 
 
 
