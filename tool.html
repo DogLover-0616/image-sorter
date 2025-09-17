@@ -105,6 +105,49 @@
       if (e.ctrlKey && (e.key === 'u' || e.key === 's')) { e.preventDefault(); return false; }
     });
 
+
+
+
+　async function canEnterTool(user) {
+  const deviceId = localStorage.getItem('deviceId_v1'); // 1で作った端末ID
+  const col = collection(db, 'users', user.uid, 'sessions');
+  const snap = await getDocs(query(col, where('active','==',true)));
+
+  let otherActive = false;
+  snap.forEach(d => { const s = d.data(); if (s.deviceId !== deviceId) otherActive = true; });
+
+  if (otherActive) return false;
+
+  // 入ることになったら、生存サインを更新
+  await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
+    lastSeenAt: serverTimestamp(),
+    active: true
+  });
+  return true;
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { location.href='index.html'; return; } // 未ログインは入口へ
+
+  const ok = await canEnterTool(user); // 先客チェック
+  if (!ok) { alert('このアカウントは別の端末で使用中です'); location.href='index.html'; return; }
+
+  // ここからツール本体を動かす（既存の初期化処理）
+  initTool && initTool();
+
+  // 1分おきの生存サイン（任意）
+  setInterval(async () => {
+    const deviceId = localStorage.getItem('deviceId_v1');
+    await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
+      lastSeenAt: serverTimestamp(),
+      active: true
+    });
+  }, 60*1000);
+});
+
+
+    
+
     // 並び替えツール本体（認証依存を除去）
     let images = [];
     let selectedIds = new Set();
@@ -477,4 +520,5 @@
   </script>
 </body>
 </html>
+
 
