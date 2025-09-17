@@ -459,14 +459,6 @@
   }
 
 
-
-// 例: 既存のエクスポート処理の最後に追記
-   const zipArrayBuffer = await buildZipFromSortedImages();
-   onExportZip(zipArrayBuffer);
-
-
-
-
   // 動作確認用のテスト（任意）
   // 実際は既存の「エクスポート」ボタンの処理で、ZIP生成後に onExportZip(...) を呼んでください
   document.addEventListener('DOMContentLoaded', () => {
@@ -475,6 +467,14 @@
       testBtn.addEventListener('click', () => {
         const dummy = new Blob(["Hello Sorted!"], { type: "application/zip" }); // ダミー [web:102]
         downloadBlobAsFile(dummy, "test.zip"); // テスト保存 [web:102]
+
+  
+
+// 例: 既存のエクスポート処理の最後に追記
+   const zipArrayBuffer = await buildZipFromSortedImages();
+   onExportZip(zipArrayBuffer);
+
+
       });
     }
   });
