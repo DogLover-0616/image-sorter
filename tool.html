@@ -1,6 +1,39 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="ja">
 <head>
+
+
+// ログイン成功時の処理を以下に変更
+auth.signInWithEmailAndPassword(email, password)
+  .then((userCredential) => {
+    // ログイン成功時、URLを変えずにtool.htmlの内容を動的に読み込む
+    loadToolPage();
+  })
+  .catch((error) => {
+    document.getElementById('message').textContent = 'ログイン失敗: ' + error.message;
+  });
+
+async function loadToolPage() {
+  try {
+    // tool.htmlの内容を取得してindex.html内に埋め込む
+    const response = await fetch('tool.html');
+    const toolContent = await response.text();
+    
+    // ログイン画面を隠してツール画面を表示
+    document.getElementById('loginForm').style.display = 'none';
+    document.body.innerHTML = toolContent;
+    
+    // URLは index.html のまま（ダミーURL効果）
+    history.pushState(null, '', 'dashboard'); // URLバーを '/dashboard' に変更
+  } catch (error) {
+    console.error('ツール読み込みエラー:', error);
+  }
+}
+
+
+
+
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>画像並び替えツール</title>
@@ -536,6 +569,7 @@ onAuthStateChanged(auth, async (user) => {
   </script>
 </body>
 </html>
+
 
 
 
