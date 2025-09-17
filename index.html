@@ -177,6 +177,38 @@
         $('#toTool').href = 'tool.html';
       }
     });
+
+
+    
+    // 1) 端末IDを作って保存（最初の1回だけ）
+function getOrCreateDeviceId() {
+  const key = 'deviceId_v1';
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = 'dev_' + crypto.getRandomValues(new Uint32Array(4)).join('-');
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+// 2) ログインが成功したらメモを書く
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return; // 未ログインなら終わり
+  const deviceId = getOrCreateDeviceId();
+  const ref = doc(db, 'users', user.uid, 'sessions', deviceId);
+  await setDoc(ref, {
+    active: true,
+    deviceId,
+    userAgent: navigator.userAgent,
+    loggedInAt: serverTimestamp(),
+    lastSeenAt: serverTimestamp()
+  }, { merge: true }); // 上書きOK
+  // ツール画面へ
+  location.href = 'tool.html';
+});
+
+    
   </script>
 </body>
 </html>
+
