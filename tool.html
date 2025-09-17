@@ -107,7 +107,7 @@
 
 
 
-
+//多重ログイン防止追加
 　async function canEnterTool(user) {
   const deviceId = localStorage.getItem('deviceId_v1'); // 1で作った端末ID
   const col = collection(db, 'users', user.uid, 'sessions');
@@ -145,7 +145,24 @@ onAuthStateChanged(auth, async (user) => {
   }, 60*1000);
 });
 
+//ログアウトしたら認証セッション削除    
+　async function signOutEverywhere() {
+  const user = auth.currentUser;
+  const deviceId = localStorage.getItem('deviceId_v1');
+  if (user && deviceId) {
+    await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
+      active: false,
+      lastSeenAt: serverTimestamp()
+    });
+  }
+  await signOut(auth);
+  location.href = 'index.html';
+}
 
+
+
+
+    
     
 
     // 並び替えツール本体（認証依存を除去）
@@ -520,5 +537,6 @@ onAuthStateChanged(auth, async (user) => {
   </script>
 </body>
 </html>
+
 
 
