@@ -1,15 +1,30 @@
-// ‚±‚±‚É©•ª‚ÌFirebaseƒvƒƒWƒFƒNƒgî•ñ‚ğ“\‚è•t‚¯‚Ä‚­‚¾‚³‚¢
+// ã“ã“ã«è‡ªåˆ†ã®Firebaseãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆæƒ…å ±ã‚’è²¼ã‚Šä»˜ã‘ã¦ãã ã•ã„
 export const firebaseConfig = {
   apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
   authDomain: "image-sorter-5a77d.firebaseapp.com",
   projectId: "image-sorter-5a77d",
-  // •K—v‚É‰‚¶‚Ä‘¼‚Ìİ’è‚à
+  // å¿…è¦ã«å¿œã˜ã¦ä»–ã®è¨­å®šã‚‚
 };
 
-  // ’Ç‰Á„§i•K—v‚ÈƒT[ƒrƒX‚Ì©“®‰ğŒˆ/‰Šú‰»‚Ég‚í‚ê‚Ü‚·j [web:48]
-  databaseURL: "https://image-sorter-5a77d-default-rtdb.firebaseio.com", // Realtime DB‚ğg‚¤ê‡ [web:48]
-  storageBucket: "image-sorter-5a77d.appspot.com",                        // Storage‚ğg‚¤ê‡i„§j[web:48]
-  messagingSenderId: "xxxxxxxxxxxx",                                      // •K{iWebƒAƒvƒŠ¯•Êj[web:48]
-  appId: "1:xxxxxxxxxxxx:web:xxxxxxxxxxxxxxxxxxxx",                       // •K{iƒAƒvƒŠ¯•Êj[web:48]
-  measurementId: "G-XXXXXXXXXX"                                           // Analyticsg—p‚Ì‚İ [web:48]
+  // è¿½åŠ æ¨å¥¨ï¼ˆå¿…è¦ãªã‚µãƒ¼ãƒ“ã‚¹ã®è‡ªå‹•è§£æ±º/åˆæœŸåŒ–ã«ä½¿ã‚ã‚Œã¾ã™ï¼‰ [web:48]
+  databaseURL: "https://image-sorter-5a77d-default-rtdb.firebaseio.com", // Realtime DBã‚’ä½¿ã†å ´åˆ [web:48]
+  storageBucket: "image-sorter-5a77d.appspot.com",                        // Storageã‚’ä½¿ã†å ´åˆï¼ˆæ¨å¥¨ï¼‰[web:48]
+  messagingSenderId: "xxxxxxxxxxxx",                                      // å¿…é ˆï¼ˆWebã‚¢ãƒ—ãƒªè­˜åˆ¥ï¼‰[web:48]
+  appId: "1:xxxxxxxxxxxx:web:xxxxxxxxxxxxxxxxxxxx",                       // å¿…é ˆï¼ˆã‚¢ãƒ—ãƒªè­˜åˆ¥ï¼‰[web:48]
+  measurementId: "G-XXXXXXXXXX"                                           // Analyticsä½¿ç”¨æ™‚ã®ã¿ [web:48]
+
 };
+
+//Firestoreã®ãƒ«ãƒ¼ãƒ«è¿½åŠ 
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /sessions/{sessionId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
