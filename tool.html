@@ -468,12 +468,6 @@
         const dummy = new Blob(["Hello Sorted!"], { type: "application/zip" }); // ダミー [web:102]
         downloadBlobAsFile(dummy, "test.zip"); // テスト保存 [web:102]
 
-  
-
-// 例: 既存のエクスポート処理の最後に追記
-   const zipArrayBuffer = await buildZipFromSortedImages();
-   onExportZip(zipArrayBuffer);
-
 
       });
     }
@@ -483,3 +477,4 @@
   </script>
 </body>
 </html>
+
