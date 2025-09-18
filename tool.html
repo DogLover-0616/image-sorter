@@ -1,41 +1,21 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-
-<style>
-  /* 初期は非表示（チラ見え防止） */
-  html.guard-wait { visibility: hidden; }
-</style>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-  import { firebaseConfig } from "./firebase-config.js";
-
-  document.documentElement.classList.add('guard-wait'); // 認証確定まで隠す
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      // 未ログインは即ログイン画面へ
-      location.replace('index.html');
-      return;
-    }
-    // ログイン済みなら表示に切替
-    document.documentElement.classList.remove('guard-wait');
-    // ここからツール初期化を開始
-  });
-</script>
-
-
-
-
-  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>画像並び替えツール</title>
+  
+  <!-- Firebase compat版 CDN（確実動作） -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
+    /* 認証確定まで画面を隠す */
+    html.guard-wait { 
+      visibility: hidden !important; 
+    }
+    /* 既存CSS */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif; background:#f8f9fa; min-height:100vh; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
     .container { width:100%; min-height:100vh; background:#fff; display:flex; flex-direction:column; }
@@ -71,24 +51,157 @@
     .batch-info { background:#e8f5e8; border:1px solid #4caf50; color:#2e7d32; padding:8px 12px; border-radius:6px; font-size:0.85rem; display:none; }
     .add-info { background:#fff3cd; border:1px solid #ffeaa7; color:#856404; padding:6px 10px; border-radius:4px; font-size:0.8rem; display:none; margin-top:4px; }
     @media (max-width: 768px) { .gallery { padding:12px; } .controls { padding:12px; } }
-
     /* 画像のドラッグ保存の抑止 */
     img { pointer-events: none; -webkit-user-drag: none; user-drag: none; }
-
   </style>
+
+  <script>
+    // Firebase設定（直接記述）
+    const firebaseConfig = {
+      apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
+      authDomain: "image-sorter-5a77d.firebaseapp.com", 
+      projectId: "image-sorter-5a77d",
+      storageBucket: "image-sorter-5a77d.appspot.com"
+      // messagingSenderIdとappIdが不明なら一旦省略（基本認証は動く）
+    };
+
+    // 最初は画面を隠す
+    document.documentElement.classList.add('guard-wait');
+    
+    console.log('Firebase初期化開始');
+    
+    let auth, db;
+    
+    try {
+      // Firebase初期化（compat版）
+      firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      
+      console.log('Firebase初期化完了');
+
+      // 端末ID取得/生成
+      function getOrCreateDeviceId() {
+        const key = 'deviceId_v1';
+        let id = localStorage.getItem(key);
+        if (!id) {
+          id = 'dev_' + crypto.getRandomValues(new Uint32Array(4)).join('-');
+          localStorage.setItem(key, id);
+        }
+        return id;
+      }
+
+      // 多重ログイン防止チェック
+      async function canEnterTool(user) {
+        try {
+          const deviceId = getOrCreateDeviceId();
+          const col = db.collection('users').doc(user.uid).collection('sessions');
+          const snap = await col.where('active', '==', true).get();
+          
+          let otherActive = false;
+          snap.forEach(doc => {
+            const data = doc.data();
+            if (data.deviceId !== deviceId) {
+              otherActive = true;
+            }
+          });
+          
+          if (otherActive) return false;
+          
+          // 入場許可なら生存サイン更新
+          await col.doc(deviceId).set({
+            active: true,
+            deviceId: deviceId,
+            userAgent: navigator.userAgent,
+            lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          
+          return true;
+        } catch (error) {
+          console.error('canEnterTool error:', error);
+          return true; // エラー時は通す
+        }
+      }
+
+      // ログアウト処理
+      window.signOutEverywhere = async function() {
+        try {
+          const user = auth.currentUser;
+          const deviceId = getOrCreateDeviceId();
+          
+          if (user && deviceId) {
+            await db.collection('users').doc(user.uid).collection('sessions').doc(deviceId).update({
+              active: false,
+              lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+          
+          await auth.signOut();
+          window.location.href = 'index.html';
+        } catch (error) {
+          console.error('Signout error:', error);
+          window.location.href = 'index.html';
+        }
+      };
+
+      // 認証状態を監視
+      auth.onAuthStateChanged(async (user) => {
+        console.log('認証状態変化:', user ? `ログイン済み(${user.email})` : '未ログイン');
+        
+        if (!user) {
+          // 未ログインの場合
+          console.log('未ログインのためリダイレクト');
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        // 多重ログインチェック
+        const ok = await canEnterTool(user);
+        if (!ok) {
+          alert('このアカウントは別の端末で使用中です。');
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        // ログイン済みの場合、画面を表示
+        console.log('ログイン確認済み、画面表示');
+        document.documentElement.classList.remove('guard-wait');
+        
+        // 生存サイン送信（1分おき）
+        setInterval(async () => {
+          try {
+            const deviceId = getOrCreateDeviceId();
+            await db.collection('users').doc(user.uid).collection('sessions').doc(deviceId).update({
+              active: true,
+              lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (error) {
+            console.warn('Heartbeat error:', error);
+          }
+        }, 60 * 1000);
+      });
+      
+    } catch (error) {
+      console.error('Firebase初期化エラー:', error);
+      // エラー時もとりあえず画面は表示（無限ループ回避）
+      document.documentElement.classList.remove('guard-wait');
+    }
+  </script>
 </head>
+
 <body oncontextmenu="return false;">
   <div class="container">
     <div class="header">
       <h1>🖼️ 画像並び替えツール</h1>
       <div class="help">Ctrl/クリックで複数選択、Shift/クリックで範囲選択、Deleteで削除、スライダーでサイズ変更</div>
     </div>
-
+    
     <div class="controls">
       <div class="row">
         <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
         <label for="fileInput" class="file-label">📁 画像ファイルを追加選択</label>
         <span id="fileCount" class="info"></span>
+        <button onclick="signOutEverywhere()" class="btn reset">🚪 ログアウト</button>
       </div>
       <div id="addInfo" class="add-info"></div>
       <div id="batchInfo" class="batch-info"></div>
@@ -106,7 +219,7 @@
       <div class="progress" id="progress"><div id="progressBar" class="bar"></div></div>
       <div id="progressInfo" class="progress-info"></div>
     </div>
-
+    
     <div class="gallery">
       <div id="galleryGrid" class="gallery-grid">
         <div class="info">画像ファイルを選択してください</div>
@@ -116,12 +229,12 @@
 
   <!-- ZIP ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
+  
   <script>
-    // 右クリック時の簡易パスワード確認（任意）
+    // 右クリック制御とツール本体は元のまま
     document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
-      const password = prompt('この操作にはパスワードが必要です。\\nパスワードを入力してください:');
+      const password = prompt('この操作にはパスワードが必要です。\nパスワードを入力してください:');
       if (password === 'orenonana0405') {
         alert('✅ パスワードが正しいため、開発者ツールを手動で開いてください。');
       } else if (password !== null) {
@@ -129,24 +242,20 @@
       }
       return false;
     });
-
-    // 開発者ツール関連ショートカットの抑止（任意）
+    
     document.addEventListener('keydown', function(e) {
       if (e.key === 'F12') { e.preventDefault(); return false; }
       if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C')) { e.preventDefault(); return false; }
       if (e.ctrlKey && (e.key === 'u' || e.key === 's')) { e.preventDefault(); return false; }
     });
     
-
-    // 並び替えツール本体（認証依存を除去）
+    // 並び替えツール本体（元のコードをそのまま使用）
     let images = [];
     let selectedIds = new Set();
     let dragSourceIds = [];
     let draggedElement = null;
-
-    const MAX_IMAGES_PER_BATCH = 500; // 500枚/zip
-    const MAX_SINGLE_FILE_SIZE = 100 * 1024 * 1024; // 100MB/ファイル
-
+    const MAX_IMAGES_PER_BATCH = 500;
+    const MAX_SINGLE_FILE_SIZE = 100 * 1024 * 1024;
     const fileInput = document.getElementById('fileInput');
     const fileCount = document.getElementById('fileCount');
     const galleryGrid = document.getElementById('galleryGrid');
@@ -161,7 +270,8 @@
     const selectionInfo = document.getElementById('selectionInfo');
     const batchInfo = document.getElementById('batchInfo');
     const addInfo = document.getElementById('addInfo');
-
+    
+    // イベントリスナー設定（元のまま）
     fileInput.addEventListener('change', handleFileSelect);
     sizeSlider.addEventListener('input', handleSizeChange);
     saveBtn.addEventListener('click', handleSave);
@@ -170,43 +280,36 @@
     document.addEventListener('keydown', handleKeyDown);
     galleryGrid.addEventListener('click', handleImageClick);
 
+    // 以下、元のhandleFileSelect〜updateButtons関数をそのまま追加
     function handleFileSelect(e) {
       const newFiles = Array.from(e.target.files);
       if (newFiles.length === 0) return;
-
       const existingFileKeys = new Set(images.map(img => `${img.name}_${img.size}`));
       const oversizedFiles = newFiles.filter(file => file.size > MAX_SINGLE_FILE_SIZE);
       if (oversizedFiles.length > 0) {
-        alert(`⚠️ 以下のファイルは100MBを超えているため除外されます:\\n${oversizedFiles.map(f => f.name).join('\\n')}`);
+        alert(`⚠️ 以下のファイルは100MBを超えているため除外されます:\n${oversizedFiles.map(f => f.name).join('\n')}`);
       }
-
       const validNewFiles = newFiles.filter(file => {
         if (!file || !file.name || !file.size || file.size > MAX_SINGLE_FILE_SIZE) return false;
         const key = `${file.name}_${file.size}`;
         return !existingFileKeys.has(key);
       });
-
       const duplicateFiles = newFiles.filter(file => {
         if (!file || !file.name || !file.size || file.size > MAX_SINGLE_FILE_SIZE) return false;
         const key = `${file.name}_${file.size}`;
         return existingFileKeys.has(key);
       });
-
       if (duplicateFiles.length > 0) {
         console.log('重複スキップ:', duplicateFiles.map(f => f.name));
       }
-
       const startIndex = images.length;
       const newObjs = validNewFiles.map((file, i) => ({
         file, name: file.name, url: URL.createObjectURL(file),
         id: `img-${Date.now()}-${startIndex + i}`, size: file.size, type: file.type
       }));
-
       images.push(...newObjs);
       fileInput.value = '';
-
       showAddInfo(validNewFiles.length, duplicateFiles.length);
-
       selectedIds.clear();
       updateFileCount();
       updateSelectionInfo();
@@ -215,6 +318,7 @@
       updateButtons();
     }
 
+    // 残りの関数も元のコードをそのまま使用
     function showAddInfo(addedCount, duplicateCount) {
       if (addedCount > 0 || duplicateCount > 0) {
         let message = '';
@@ -289,7 +393,9 @@
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', 'drag');
     }
+
     function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
     function onDrop(e) {
       e.preventDefault(); this.classList.remove('drag-over');
       if (this !== draggedElement) {
@@ -302,6 +408,7 @@
         renderGallery(); updateSelectionInfo();
       }
     }
+
     function onDragEnd() { document.querySelectorAll('.image-item').forEach(i => i.classList.remove('drag-over')); }
 
     function handleSizeChange() {
@@ -317,7 +424,6 @@
       if (!item) return;
       const id = item.dataset.id;
       const isCtrl = e.ctrlKey || e.metaKey; const isShift = e.shiftKey;
-
       if (isShift && selectedIds.size) {
         const arr = Array.from(selectedIds);
         const last = arr[arr.length - 1];
@@ -359,21 +465,17 @@
 
     async function handleSave() {
       if (!images.length) return;
-
       const invalidImages = images.filter(img => !img.file || !img.name || !img.file.size);
       if (invalidImages.length > 0) {
         alert('⚠️ 一部の画像ファイルが無効になっています。ファイルを再選択してください。');
         return;
       }
-
       saveBtn.disabled = true;
       progress.style.display = 'block';
       progressInfo.style.display = 'block';
-
       try {
         const batches = createBatchesByCount(images, MAX_IMAGES_PER_BATCH);
         const timestamp = new Date().toISOString().slice(0, 10);
-
         for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
           const batch = batches[batchIndex];
           const batchSuffix = batches.length > 1 ? `_part${batchIndex + 1}` : '';
@@ -382,15 +484,13 @@
           await new Promise(resolve => setTimeout(resolve, 100));
           if (window.gc) { window.gc(); }
         }
-
         const message = batches.length > 1 
           ? `✅ ${batches.length}個のZIPファイル（500枚/zip）に分割して保存が完了しました！`
           : '✅ 画像の保存が完了しました！';
         alert(message);
-
       } catch (error) {
         console.error('Save error:', error);
-        alert(`❌ 保存中にエラーが発生しました: ${error.message}\\n\\nメモリ不足または大容量ファイルが原因の可能性があります。`);
+        alert(`❌ 保存中にエラーが発生しました: ${error.message}\n\nメモリ不足または大容量ファイルが原因の可能性があります。`);
       } finally {
         progress.style.display = 'none';
         progressBar.style.width = '0%';
@@ -402,43 +502,40 @@
     async function processBatch(batch, filename, batchIndex, totalBatches) {
       const zip = new JSZip();
       let arrayBuffer = null;
-
       for (let i = 0; i < batch.length; i++) {
         const image = batch[i];
         const overallProgress = ((batchIndex * MAX_IMAGES_PER_BATCH + i + 1) / (images.length)) * 100;
         progressBar.style.width = `${Math.min(overallProgress, 100)}%`;
-
         try {
           if (!image.file || typeof image.file.arrayBuffer !== 'function') {
             console.warn(`Skipping invalid file: ${image.name}`);
             continue;
           }
-
           const extMatch = image.name.match(/\.([^.]+)$/);
           const ext = extMatch ? extMatch[1] : '';
           const globalIndex = images.indexOf(image);
           const newName = ext ? `${globalIndex + 1}.${ext}` : `${globalIndex + 1}`;
-
           arrayBuffer = await image.file.arrayBuffer();
           zip.file(newName, arrayBuffer);
           arrayBuffer = null;
-
         } catch (fileError) {
           console.error(`Error processing file ${image.name}:`, fileError);
         }
-
         if (i % 50 === 0) {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
       }
-
       const blob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: { level: 3 },
         streamFiles: true
       });
+      // Blob URLダウンロード
+      downloadBlobAsFile(blob, filename);
+    }
 
+    function downloadBlobAsFile(blob, filename) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -466,111 +563,15 @@
       }
     }
 
-    function updateButtons() { const has = !!images.length; const sel = !!selectedIds.size; saveBtn.disabled = !has; resetBtn.disabled = !has; deleteBtn.disabled = !sel; }
+    function updateButtons() { 
+      const has = !!images.length; 
+      const sel = !!selectedIds.size; 
+      saveBtn.disabled = !has; 
+      resetBtn.disabled = !has; 
+      deleteBtn.disabled = !sel; 
+    }
 
     updateButtons();
-
-
-
-
- // Blobをファイルとして保存するユーティリティ
-  function downloadBlobAsFile(blob, filename) {
-    const url = URL.createObjectURL(blob);   // 一時URL作成 [web:103]
-    const a = document.createElement('a');   // リンク生成 [web:102]
-    a.href = url;
-    a.download = filename;                   // 保存名 [web:102]
-    document.body.appendChild(a);
-    a.click();                               // 自動クリック [web:102]
-    a.remove();
-    URL.revokeObjectURL(url);                // 解放 [web:103]
-  }
-
-  // ZIP生成直後に呼ぶ関数（既存のZIP生成処理の末尾から呼び出してください）
-  function onExportZip(zipArrayBuffer) {
-    const blob = new Blob([zipArrayBuffer], { type: "application/zip" }); // Blob化 [web:110]
-    downloadBlobAsFile(blob, "sorted-images.zip"); // 直接保存 [web:102]
-  }
-
-
-  // 動作確認用のテスト（任意）
-  // 実際は既存の「エクスポート」ボタンの処理で、ZIP生成後に onExportZip(...) を呼んでください
-  document.addEventListener('DOMContentLoaded', () => {
-    const testBtn = document.getElementById('testBlobDownload');
-    if (testBtn) {
-      testBtn.addEventListener('click', () => {
-        const dummy = new Blob(["Hello Sorted!"], { type: "application/zip" }); // ダミー [web:102]
-        downloadBlobAsFile(dummy, "test.zip"); // テスト保存 [web:102]
-
-
-      });
-    }
-  });
-
-
-
-
-
-  //多重ログイン防止追加
-　async function canEnterTool(user) {
-  const deviceId = localStorage.getItem('deviceId_v1'); // 1で作った端末ID
-  const col = collection(db, 'users', user.uid, 'sessions');
-  const snap = await getDocs(query(col, where('active','==',true)));
-
-  let otherActive = false;
-  snap.forEach(d => { const s = d.data(); if (s.deviceId !== deviceId) otherActive = true; });
-
-  if (otherActive) return false;
-
-  // 入ることになったら、生存サインを更新
-  await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
-    lastSeenAt: serverTimestamp(),
-    active: true
-  });
-  return true;
-}
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) { location.href='index.html'; return; } // 未ログインは入口へ
-
-  const ok = await canEnterTool(user); // 先客チェック
-  if (!ok) { alert('このアカウントは別の端末で使用中です'); location.href='index.html'; return; }
-
-  // ここからツール本体を動かす（既存の初期化処理）
-  initTool && initTool();
-
-  // 1分おきの生存サイン（任意）
-  setInterval(async () => {
-    const deviceId = localStorage.getItem('deviceId_v1');
-    await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
-      lastSeenAt: serverTimestamp(),
-      active: true
-    });
-  }, 60*1000);
-});
-
-//ログアウトしたら認証セッション削除    
-　async function signOutEverywhere() {
-  const user = auth.currentUser;
-  const deviceId = localStorage.getItem('deviceId_v1');
-  if (user && deviceId) {
-    await updateDoc(doc(db,'users',user.uid,'sessions',deviceId), {
-      active: false,
-      lastSeenAt: serverTimestamp()
-    });
-  }
-  await signOut(auth);
-  location.href = 'index.html';
-}
-
-
-
-
   </script>
 </body>
 </html>
-
-
-
-
-
-
