@@ -1,6 +1,30 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <style>
+  /* 判定が終わるまで全体を隠す */
+  html.guard-wait { visibility: hidden; }
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { firebaseConfig } from "./firebase-config.js";
+
+  document.documentElement.classList.add('guard-wait'); // 非表示にする [web:118]
+  const app = initializeApp(firebaseConfig);            // 初期化 [web:112]
+  const auth = getAuth(app);                            // 認証を取得 [web:112]
+
+  onAuthStateChanged(auth, (user) => {                  // 認証状態を監視 [web:112]
+    if (!user) {                                        // 未ログインなら
+      location.replace('index.html');                   // ログイン画面へ戻す [web:114]
+      return;
+    }
+    document.documentElement.classList.remove('guard-wait'); // 表示ON [web:118]
+    // ここで並び替えツールの初期化を開始
+  });
+</script>
+
+  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>並び替えツール ログイン</title>
@@ -214,6 +238,7 @@ history.replaceState({}, "", "/app"); // 表示URLだけを /app に変更（リ
   </script>
 </body>
 </html>
+
 
 
 
