@@ -1,24 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <style>
-  /* 判定が終わるまで全体を隠す */
-  html.guard-wait { visibility: hidden; }
-</style>
-<script type="module">
-  // 処理前説明: （保護ページ用の）認証ガードの雛形。ログインページでは実行不要だが残す場合はguard解除のみ使う［参考用］
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-  import { firebaseConfig } from "./firebase-config.js";
-  document.documentElement.classList.add('guard-wait'); // 非表示にする
-  const app = initializeApp(firebaseConfig);            // 初期化
-  const authMod = getAuth(app);                         // 認証を取得
-  onAuthStateChanged(authMod, (user) => {               // 認証状態を監視
-    // ログインページでは常時表示でよいので、ガードは解除のみ
-    document.documentElement.classList.remove('guard-wait'); // 表示ON
-    // ここで並び替えツールの初期化を開始（このページでは未使用）
-  });
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>並び替えツール ログイン</title>
@@ -96,7 +78,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>並び替えツール ログイン</h1>
+    <h1>並び替え
+     ログイン</h1>
     <div class="sub">メールとパスワードを入力してください</div>
     <form id="loginForm" autocomplete="on">
       <div class="field">
@@ -134,32 +117,21 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script>
-    // 処理前説明: Blobをダウンロードするヘルパー（UIには出さず、機能だけ保持）
-    function downloadBlobAsFile(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    // 処理前説明: Firebaseをcompatで初期化し、Authインスタンスを取得
+    // 処理前説明: Firebase初期化と認証永続化の設定（LOCALで保持）［attached_file:11］
     const firebaseConfig = {
       apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
       authDomain: "image-sorter-5a77d.firebaseapp.com",
       projectId: "image-sorter-5a77d"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    firebase.initializeApp(firebaseConfig); // 初期化［attached_file:13］
+    const auth = firebase.auth(); // 認証取得［attached_file:13］
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); // LOCAL永続化［attached_file:11］
 
-    // 処理前説明: ショートハンド/メッセージ要素参照
+    // 処理前説明: DOM参照とメッセージ領域［attached_file:11］
     const $ = (s)=>document.querySelector(s);
     const msg = $('#message');
 
-    // 処理前説明: ログインフォーム送信でメール/パスワード認証し、成功時はツールへ遷移
+    // 処理前説明: 通常ログイン（成功時はツールへ遷移）［attached_file:13］
     $('#loginForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
       msg.textContent = '';
@@ -167,7 +139,7 @@
         const email = $('#email').value.trim();
         const password = $('#password').value;
         await auth.signInWithEmailAndPassword(email, password);
-        msg.textContent = 'ログインに成功しました。';
+        msg.textContent = 'ログインに成功しました。ツールへ移動します。';
         msg.className = 'msg ok';
         location.href = 'tool.html';
       }catch(err){
@@ -176,7 +148,7 @@
       }
     });
 
-    // 処理前説明: 「パスワードを忘れた」ボタンで再設定メールを送信
+    // 処理前説明: 「パスワードを忘れた」→ 再設定メール送信［attached_file:12］
     $('#resetBtn').addEventListener('click', async ()=>{
       msg.textContent = '';
       const email = $('#email').value.trim();
@@ -196,37 +168,35 @@
       }
     });
 
-    // 処理前説明: 「パスワード変更」ボタン。ログイン済みなら再認証→updatePassword、未ログインならリセットメール送信にフォールバック
+    // 処理前説明: 何度でも変更可能な「パスワード変更」フロー
+    // 1) 未ログイン: email + 現在パスワードで一時サインイン → updatePassword
+    // 2) ログイン済み: 入力または currentUser.email で再認証 → updatePassword［attached_file:14］
     $('#changePwBtn').addEventListener('click', async ()=>{
       msg.textContent = '';
-      const email = $('#email').value.trim();
-      if(!email){
+
+      const inputEmail = $('#email').value.trim();
+      const currentPw = $('#password').value;
+
+      if(!inputEmail && !auth.currentUser){
         msg.textContent = '先にメールアドレスを入力してください。';
         msg.className = 'msg error';
         $('#email').focus();
         return;
       }
-
-      // まだ未ログインなら安全のためリセットメールを送る（その場変更は不可）
-      if(!auth.currentUser){
-        if(confirm('未ログインのため、再設定メールを送信しますか？')){
-          try{
-            await auth.sendPasswordResetEmail(email);
-            msg.textContent = '再設定用のメールを送信しました。メールを確認してください。';
-            msg.className = 'msg ok';
-          }catch(err){
-            msg.textContent = '送信できませんでした: ' + err.message;
-            msg.className = 'msg error';
-          }
-        }
+      if(!currentPw){
+        msg.textContent = '先に現在のパスワードを入力してください。';
+        msg.className = 'msg error';
+        $('#password').focus();
         return;
       }
 
-      // ログイン済み: 現在のパスワードと新パスワードを入力してもらう
-      const currentPw = prompt('現在のパスワードを入力してください:');
-      if(currentPw === null) return;
-      const newPw = prompt('新しいパスワードを入力してください:');
+      const newPw = prompt('新しいパスワードを入力してください（6文字以上推奨）:');
       if(newPw === null) return;
+      if(newPw.length < 6){
+        msg.textContent = '新しいパスワードは6文字以上にしてください。';
+        msg.className = 'msg error';
+        return;
+      }
       const newPw2 = prompt('新しいパスワード（確認）を再入力してください:');
       if(newPw2 === null) return;
       if(newPw !== newPw2){
@@ -236,28 +206,40 @@
       }
 
       try{
-        // 処理前説明: Email/Passwordの資格情報を使って再認証し、その後updatePasswordを実行
-        const cred = firebase.auth.EmailAuthProvider.credential(email, currentPw);
-        await auth.currentUser.reauthenticateWithCredential(cred);
+        // 現在のユーザーを確実に得る
+        if(!auth.currentUser){
+          // 処理前説明: 未ログイン → 一時サインイン（何度でも可）［attached_file:13］
+          await auth.signInWithEmailAndPassword(inputEmail, currentPw);
+        }else{
+          // 処理前説明: ログイン済み → 再認証（メールは入力値があればそれ、なければ currentUser.email）［attached_file:14］
+          const emailForReauth = inputEmail || auth.currentUser.email;
+          const cred = firebase.auth.EmailAuthProvider.credential(emailForReauth, currentPw);
+          await auth.currentUser.reauthenticateWithCredential(cred);
+        }
+
+        // 処理前説明: パスワード更新（連続実行可）［attached_file:13］
         await auth.currentUser.updatePassword(newPw);
-        msg.textContent = 'パスワードを変更しました。次回から新しいパスワードをご利用ください。';
+
+        // 処理前説明: 成功メッセージと入力欄のパスワード更新ヒント［attached_file:11］
+        msg.textContent = 'パスワードを変更しました。次回以降は新しいパスワードを現在パスワードとして入力してください。';
         msg.className = 'msg ok';
+
+        // 任意: 入力欄を新パスワードに差し替え（連続変更をサポート）
+        $('#password').value = newPw;
       }catch(err){
+        // 代表的な失敗: wrong-password / user-not-found / requires-recent-login / too-many-requests 等
         msg.textContent = 'パスワード変更に失敗しました: ' + err.message;
         msg.className = 'msg error';
       }
     });
 
-    // 処理前説明: 既にログイン済みならツールリンクを表示
+    // 処理前説明: ログイン済なら「ツールへ」を可視化（自動遷移はしない）［attached_file:11］
     auth.onAuthStateChanged((user)=>{
       if(user){
         $('#toTool').style.visibility = 'visible';
         $('#toTool').href = 'tool.html';
       }
     });
-
-    // （参考）以下はセッション記録などの追加処理を行う場合の雛形。未使用のAPI参照があるとエラーになるため本番では削除/分離推奨
-    // history.replaceState({}, "", "/app"); // 表示URLだけを /app に変更（リロードなし）
   </script>
 </body>
 </html>
