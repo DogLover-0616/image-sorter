@@ -1,46 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <style>
-  /* 判定が終わるまで全体を隠す */
-  html.guard-wait { visibility: hidden; }
-</style>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-  import { firebaseConfig } from "./firebase-config.js";
-
-  document.documentElement.classList.add('guard-wait'); // 非表示にする [web:118]
-  const app = initializeApp(firebaseConfig);            // 初期化 [web:112]
-  const auth = getAuth(app);                            // 認証を取得 [web:112]
-
-  onAuthStateChanged(auth, (user) => {                  // 認証状態を監視 [web:112]
-    if (!user) {                                        // 未ログインなら
-      location.replace('index.html');                   // ログイン画面へ戻す [web:114]
-      return;
-    }
-    document.documentElement.classList.remove('guard-wait'); // 表示ON [web:118]
-    // ここで並び替えツールの初期化を開始
-  });
-</script>
-
-  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>並び替えツール ログイン</title>
+
+  <style>
+    /* 処理前説明: 認証確定まで全体を非表示にしてチラつきを防止します */
+    html.guard-wait { visibility: hidden; }
+  </style>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      --bg: #0f172a;
-      --card: #0b1220;
-      --muted: #94a3b8;
-      --text: #e2e8f0;
-      --primary: #60a5fa;
-      --primary-strong:#3b82f6;
-      --ring: rgba(96,165,250,.35);
-      --danger:#ef4444;
-      --ok:#10b981;
+      --bg: #0f172a; --card: #0b1220; --muted: #94a3b8; --text: #e2e8f0;
+      --primary: #60a5fa; --primary-strong:#3b82f6; --ring: rgba(96,165,250,.35);
+      --danger:#ef4444; --ok:#10b981;
     }
     *{box-sizing:border-box}
     body{
@@ -61,39 +38,33 @@
     .input{
       width:100%; padding:16px 44px 14px 44px; border-radius:14px; outline:0;
       border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.6); color:var(--text);
-      transition:.2s border-color, .2s box-shadow, .2s background;
-      font-size:15px;
+      transition:.2s border-color, .2s box-shadow, .2s background; font-size:15px;
     }
     .input::placeholder{color:transparent}
     .label{
       position:absolute; left:44px; top:14px; font-size:14px; color:var(--muted); pointer-events:none;
-      transition:.18s transform, .18s color, .18s font-size;
-      transform-origin:left top;
+      transition:.18s transform, .18s color, .18s font-size; transform-origin:left top;
     }
     .input:focus{ border-color:var(--primary); box-shadow:0 0 0 6px var(--ring), 0 10px 30px rgba(59,130,246,.15); background:rgba(2,6,23,.75); }
-    .input:focus + .label,
-    .input:not(:placeholder-shown) + .label{
+    .input:focus + .label, .input:not(:placeholder-shown) + .label{
       transform:translateY(-26px) scale(.9); color:var(--primary);
     }
     .icon{
       position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:18px;
       width:20px; height:20px; display:grid; place-items:center;
     }
-    .actions{display:flex; gap:12px; align-items:center; margin-top:6px}
+    .actions{display:flex; gap:12px; align-items:center; margin-top:6px; flex-wrap:wrap}
     .btn{
-      flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(148,163,184,.22);
+      flex:1; min-width:160px; padding:12px 14px; border-radius:12px; border:1px solid rgba(148,163,184,.22);
       background:linear-gradient(180deg, var(--primary), var(--primary-strong)); color:white; cursor:pointer;
       font-weight:600; letter-spacing:.02em; box-shadow:0 12px 30px rgba(59,130,246,.3);
       transition:.2s transform, .2s box-shadow, .2s filter;
     }
     .btn:hover{ transform: translateY(-1px); filter:saturate(1.05); }
     .btn.secondary{
-      flex:unset; background:transparent; color:var(--text); border-color:rgba(148,163,184,.32);
-      box-shadow:none; padding:12px 14px;
+      background:transparent; color:var(--text); border-color:rgba(148,163,184,.32);
+      box-shadow:none;
     }
-    .btn.secondary:hover{ box-shadow:0 10px 26px rgba(148,163,184,.15); }
-    .link{color:var(--primary); text-decoration:none; font-size:.9rem}
-    .row-between{display:flex; justify-content:space-between; align-items:center; margin-top:8px}
     .msg{min-height:22px; margin-top:14px; font-size:.92rem}
     .msg.error{color:var(--danger)} .msg.ok{color:var(--ok)}
     @media (max-width:480px){ .card{padding:22px} }
@@ -103,6 +74,7 @@
   <div class="card">
     <h1>並び替えツール ログイン</h1>
     <div class="sub">メールとパスワードを入力してください</div>
+
     <form id="loginForm" autocomplete="on">
       <div class="field">
         <span class="icon">📧</span>
@@ -114,59 +86,91 @@
         <input id="password" class="input" type="password" autocomplete="current-password" placeholder=" " required>
         <label class="label" for="password">パスワード</label>
       </div>
+
       <div class="actions">
         <button type="submit" class="btn">ログイン</button>
-        <button id="resetBtn" type="button" class="btn secondary" title="メールにパスワード再設定リンクを送ります">パスワードを初期化</button>
-      </div>
-      <div class="row-between">
-        <a id="toTool" class="link" href="#" style="visibility:hidden">
-        <a id="help" class="link" href="#" onclick="alert('メールを入力して「パスワードを初期化」を押すと、再設定メールが届きます。');return false;"></a>
+        <button id="changePwdBtn" type="button" class="btn secondary" title="現在のパスワードで再認証後、新しいパスワードへ変更">パスワード変更</button>
+        <button id="resetBtn" type="button" class="btn secondary" title="再設定メールを送信します">パスワードを忘れた</button>
       </div>
 
-      <!-- テスト保存（Blob）ボタンは削除しました -->
+      <!-- ツールを開く/ヘルプは削除しました -->
 
       <div id="message" class="msg"></div>
     </form>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script type="module">
+    // 処理前説明: FirebaseモジュールSDKを初期化し、認証/Firestoreを取得、guard-waitで認証状態確定まで非表示にします
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+      sendPasswordResetEmail, updatePassword, reauthenticateWithCredential,
+      EmailAuthProvider
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  <script>
-    // Blob URLダウンロード共通関数（機能は残し、UIは出さない）
-    function downloadBlobAsFile(blob, filename) {
-      const url = URL.createObjectURL(blob);      // 一時URL [web:103]
-      const a = document.createElement('a');      // 一時リンク [web:102]
-      a.href = url;
-      a.download = filename;                      // 保存名 [web:102]
-      document.body.appendChild(a);
-      a.click();                                  // 自動保存 [web:102]
-      a.remove();
-      URL.revokeObjectURL(url);                   // 解放 [web:103]
-    }
+    document.documentElement.classList.add('guard-wait');
 
-    // Firebase設定
+    // 処理前説明: 既存プロジェクト設定（機能は不変）
     const firebaseConfig = {
       apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
       authDomain: "image-sorter-5a77d.firebaseapp.com",
       projectId: "image-sorter-5a77d"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+
+    // 処理前説明: 初期化とインスタンス取得
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // 処理前説明: DOMユーティリティとメッセージ領域
     const $ = (s)=>document.querySelector(s);
     const msg = $('#message');
 
-    // ログイン送信
+    // 処理前説明: 端末識別IDを生成/永続化（セッション記録用）
+    function getOrCreateDeviceId() {
+      const key = 'deviceId_v1';
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = 'dev_' + crypto.getRandomValues(new Uint32Array(4)).join('-');
+        localStorage.setItem(key, id);
+      }
+      return id;
+    }
+
+    // 処理前説明: 認証確定でguard解除、ログイン有無でパスワード変更ボタンの活性を切替
+    onAuthStateChanged(auth, (user) => {
+      document.documentElement.classList.remove('guard-wait');
+      $('#changePwdBtn').disabled = !user;
+    });
+
+    // 処理前説明: フォーム送信でログイン→セッション記録→tool.htmlへ遷移
     $('#loginForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
       msg.textContent = '';
+      msg.className = 'msg';
       try{
         const email = $('#email').value.trim();
         const password = $('#password').value;
-        await auth.signInWithEmailAndPassword(email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+
+        // セッション記録
+        const deviceId = getOrCreateDeviceId();
+        await setDoc(doc(db, 'users', cred.user.uid, 'sessions', deviceId), {
+          active: true,
+          deviceId,
+          userAgent: navigator.userAgent,
+          loggedInAt: serverTimestamp(),
+          lastSeenAt: serverTimestamp()
+        }, { merge: true });
+
         msg.textContent = 'ログインに成功しました。';
         msg.className = 'msg ok';
+
+        // URL体裁（任意）
+        history.replaceState({}, "", "/app");
+
+        // ツールへ
         location.href = 'tool.html';
       }catch(err){
         msg.textContent = 'ログイン失敗: ' + err.message;
@@ -174,9 +178,10 @@
       }
     });
 
-    // パスワード初期化
+    // 処理前説明: 「パスワードを忘れた」押下で再設定メールを送信（要メール入力）
     $('#resetBtn').addEventListener('click', async ()=>{
       msg.textContent = '';
+      msg.className = 'msg';
       const email = $('#email').value.trim();
       if(!email){
         msg.textContent = '先にメールアドレスを入力してください。';
@@ -185,7 +190,7 @@
         return;
       }
       try{
-        await auth.sendPasswordResetEmail(email);
+        await sendPasswordResetEmail(auth, email);
         msg.textContent = '再設定用のメールを送信しました。メールを確認してください。';
         msg.className = 'msg ok';
       }catch(err){
@@ -194,52 +199,40 @@
       }
     });
 
-    // 既ログインならツールへ
-    auth.onAuthStateChanged((user)=>{
-      if(user){
-        $('#toTool').style.visibility = 'visible';
-        $('#toTool').href = 'tool.html';
+    // 処理前説明: 「パスワード変更」押下で現在PWにより再認証→新PWへ更新（ログイン中のみ）
+    $('#changePwdBtn').addEventListener('click', async ()=>{
+      msg.textContent = '';
+      msg.className = 'msg';
+      const user = auth.currentUser;
+      if(!user){
+        msg.textContent = 'パスワード変更はログイン後に実行してください。';
+        msg.className = 'msg error';
+        return;
+      }
+      try{
+        const current = prompt('現在のパスワードを入力してください:');
+        if(current === null) return;
+        const next = prompt('新しいパスワードを入力してください（6文字以上が推奨）:');
+        if(next === null) return;
+        const next2 = prompt('新しいパスワードを再入力してください:');
+        if(next2 === null) return;
+        if(next !== next2){
+          msg.textContent = '新しいパスワードが一致しません。';
+          msg.className = 'msg error';
+          return;
+        }
+
+        const credential = EmailAuthProvider.credential(user.email, current);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, next);
+
+        msg.textContent = 'パスワードを変更しました。';
+        msg.className = 'msg ok';
+      }catch(err){
+        msg.textContent = '変更できませんでした: ' + err.message;
+        msg.className = 'msg error';
       }
     });
-
-
-    
-    // 1) 端末IDを作って保存（最初の1回だけ）
-function getOrCreateDeviceId() {
-  const key = 'deviceId_v1';
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = 'dev_' + crypto.getRandomValues(new Uint32Array(4)).join('-');
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
-
-// 2) ログインが成功したらメモを書く
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return; // 未ログインなら終わり
-  const deviceId = getOrCreateDeviceId();
-  const ref = doc(db, 'users', user.uid, 'sessions', deviceId);
-  await setDoc(ref, {
-    active: true,
-    deviceId,
-    userAgent: navigator.userAgent,
-    loggedInAt: serverTimestamp(),
-    lastSeenAt: serverTimestamp()
-  }, { merge: true }); // 上書きOK
-  // ツール画面へ
-  location.href = 'tool.html';
-});
-
-    // ログイン成功直後
-history.replaceState({}, "", "/app"); // 表示URLだけを /app に変更（リロードなし）
-
-    
   </script>
 </body>
 </html>
-
-
-
-
-
