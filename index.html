@@ -55,6 +55,15 @@
       position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:18px;
       width:20px; height:20px; display:grid; place-items:center;
     }
+    .checkbox-wrapper{
+      display:flex; align-items:center; gap:8px; margin:12px 0 16px;
+    }
+    .checkbox-wrapper input[type="checkbox"]{
+      width:18px; height:18px; cursor:pointer; accent-color:var(--primary);
+    }
+    .checkbox-wrapper label{
+      color:var(--text); font-size:.92rem; cursor:pointer; user-select:none;
+    }
     .actions{display:flex; gap:12px; align-items:center; margin-top:6px}
     .btn{
       flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(148,163,184,.22);
@@ -78,8 +87,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>並び替え
-     ログイン</h1>
+    <h1>並び替えツール ログイン</h1>
     <div class="sub">メールとパスワードを入力してください</div>
     <form id="loginForm" autocomplete="on">
       <div class="field">
@@ -91,6 +99,12 @@
         <span class="icon">🔒</span>
         <input id="password" class="input" type="password" autocomplete="current-password" placeholder=" " required>
         <label class="label" for="password">パスワード</label>
+      </div>
+
+      <!-- ログイン情報を記憶するチェックボックス -->
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">ログイン情報を記憶する</label>
       </div>
 
       <!-- 上段: ログイン + パスワード変更 -->
@@ -117,27 +131,58 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script>
-    // 処理前説明: Firebase初期化と認証永続化の設定（LOCALで保持）［attached_file:11］
+    // Firebase初期化と認証永続化の設定
     const firebaseConfig = {
       apiKey: "AIzaSyD9D6IE-FdCYOKqVzPpl7E8qK7njnBxqfQ",
       authDomain: "image-sorter-5a77d.firebaseapp.com",
       projectId: "image-sorter-5a77d"
     };
-    firebase.initializeApp(firebaseConfig); // 初期化［attached_file:13］
-    const auth = firebase.auth(); // 認証取得［attached_file:13］
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); // LOCAL永続化［attached_file:11］
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
-    // 処理前説明: DOM参照とメッセージ領域［attached_file:11］
+    // DOM参照
     const $ = (s)=>document.querySelector(s);
     const msg = $('#message');
+    const emailInput = $('#email');
+    const passwordInput = $('#password');
+    const rememberCheckbox = $('#rememberMe');
 
-    // 処理前説明: 通常ログイン（成功時はツールへ遷移）［attached_file:13］
+    // ページロード時：保存されたログイン情報を復元
+    window.addEventListener('load', ()=>{
+      const savedEmail = localStorage.getItem('loginEmail');
+      const savedPassword = localStorage.getItem('loginPassword');
+      const rememberMe = localStorage.getItem('rememberMe');
+      
+      if(rememberMe === 'true' && savedEmail){
+        emailInput.value = savedEmail;
+        if(savedPassword){
+          passwordInput.value = savedPassword;
+        }
+        rememberCheckbox.checked = true;
+      }
+    });
+
+    // 通常ログイン
     $('#loginForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
       msg.textContent = '';
+      
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      
+      // ログイン情報の保存または削除
+      if(rememberCheckbox.checked){
+        localStorage.setItem('loginEmail', email);
+        localStorage.setItem('loginPassword', password);
+        localStorage.setItem('rememberMe', 'true');
+      }else{
+        localStorage.removeItem('loginEmail');
+        localStorage.removeItem('loginPassword');
+        localStorage.setItem('rememberMe', 'false');
+      }
+      
       try{
-        const email = $('#email').value.trim();
-        const password = $('#password').value;
         await auth.signInWithEmailAndPassword(email, password);
         msg.textContent = 'ログインに成功しました。ツールへ移動します。';
         msg.className = 'msg ok';
@@ -148,14 +193,14 @@
       }
     });
 
-    // 処理前説明: 「パスワードを忘れた」→ 再設定メール送信［attached_file:12］
+    // パスワードを忘れた
     $('#resetBtn').addEventListener('click', async ()=>{
       msg.textContent = '';
-      const email = $('#email').value.trim();
+      const email = emailInput.value.trim();
       if(!email){
         msg.textContent = '先にメールアドレスを入力してください。';
         msg.className = 'msg error';
-        $('#email').focus();
+        emailInput.focus();
         return;
       }
       try{
@@ -168,25 +213,23 @@
       }
     });
 
-    // 処理前説明: 何度でも変更可能な「パスワード変更」フロー
-    // 1) 未ログイン: email + 現在パスワードで一時サインイン → updatePassword
-    // 2) ログイン済み: 入力または currentUser.email で再認証 → updatePassword［attached_file:14］
+    // パスワード変更
     $('#changePwBtn').addEventListener('click', async ()=>{
       msg.textContent = '';
 
-      const inputEmail = $('#email').value.trim();
-      const currentPw = $('#password').value;
+      const inputEmail = emailInput.value.trim();
+      const currentPw = passwordInput.value;
 
       if(!inputEmail && !auth.currentUser){
         msg.textContent = '先にメールアドレスを入力してください。';
         msg.className = 'msg error';
-        $('#email').focus();
+        emailInput.focus();
         return;
       }
       if(!currentPw){
         msg.textContent = '先に現在のパスワードを入力してください。';
         msg.className = 'msg error';
-        $('#password').focus();
+        passwordInput.focus();
         return;
       }
 
@@ -206,34 +249,31 @@
       }
 
       try{
-        // 現在のユーザーを確実に得る
         if(!auth.currentUser){
-          // 処理前説明: 未ログイン → 一時サインイン（何度でも可）［attached_file:13］
           await auth.signInWithEmailAndPassword(inputEmail, currentPw);
         }else{
-          // 処理前説明: ログイン済み → 再認証（メールは入力値があればそれ、なければ currentUser.email）［attached_file:14］
           const emailForReauth = inputEmail || auth.currentUser.email;
           const cred = firebase.auth.EmailAuthProvider.credential(emailForReauth, currentPw);
           await auth.currentUser.reauthenticateWithCredential(cred);
         }
 
-        // 処理前説明: パスワード更新（連続実行可）［attached_file:13］
         await auth.currentUser.updatePassword(newPw);
 
-        // 処理前説明: 成功メッセージと入力欄のパスワード更新ヒント［attached_file:11］
         msg.textContent = 'パスワードを変更しました。次回以降は新しいパスワードを現在パスワードとして入力してください。';
         msg.className = 'msg ok';
 
-        // 任意: 入力欄を新パスワードに差し替え（連続変更をサポート）
-        $('#password').value = newPw;
+        // 記憶機能が有効な場合、新しいパスワードで更新
+        passwordInput.value = newPw;
+        if(rememberCheckbox.checked){
+          localStorage.setItem('loginPassword', newPw);
+        }
       }catch(err){
-        // 代表的な失敗: wrong-password / user-not-found / requires-recent-login / too-many-requests 等
         msg.textContent = 'パスワード変更に失敗しました: ' + err.message;
         msg.className = 'msg error';
       }
     });
 
-    // 処理前説明: ログイン済なら「ツールへ」を可視化（自動遷移はしない）［attached_file:11］
+    // ログイン済なら「ツールへ」を可視化
     auth.onAuthStateChanged((user)=>{
       if(user){
         $('#toTool').style.visibility = 'visible';
