@@ -224,8 +224,12 @@
     }
     .image-item:hover { box-shadow: 0 10px 28px rgba(0,0,0,.35); border-color: var(--border-bright); transform: translateY(-2px); }
     .image-item:active { cursor: grabbing; }
-    .image-item.selected  { border-color: var(--sel); box-shadow: 0 0 0 2px rgba(249,115,22,.3); }
-    .image-item.drag-over { border-color: var(--primary); box-shadow: 0 0 0 2px var(--ring); background: var(--card-hover); }
+    .image-item.selected      { border-color: var(--sel); box-shadow: 0 0 0 2px rgba(249,115,22,.3); }
+    .image-item.drag-over     { border-color: var(--primary); box-shadow: 0 0 0 2px var(--ring); background: var(--card-hover); }
+    /* 左半分ドロップ：左側に挿入インジケーター */
+    .image-item.drop-left  { border-left: 3px solid var(--primary); box-shadow: -4px 0 12px var(--ring); background: var(--card-hover); }
+    /* 右半分ドロップ：右側に挿入インジケーター */
+    .image-item.drop-right { border-right: 3px solid var(--primary); box-shadow: 4px 0 12px var(--ring); background: var(--card-hover); }
 
     .img-viewport {
       position: relative; width: 100%; height: var(--img-height, 200px);
@@ -814,14 +818,18 @@
     /* ─────────────────────────────────────────
        画像間 Drag & Drop（並び替え）
     ───────────────────────────────────────── */
+    function clearDropIndicators() {
+      document.querySelectorAll('.image-item').forEach(i =>
+        i.classList.remove('drag-over', 'drop-left', 'drop-right'));
+    }
+
     function setupDnD() {
       document.querySelectorAll('.image-item').forEach(item => {
         item.addEventListener('dragstart',  onDragStart);
         item.addEventListener('dragover',   onDragOver);
         item.addEventListener('drop',       onDrop);
         item.addEventListener('dragend',    onDragEnd);
-        item.addEventListener('dragenter',  () => { if (item !== draggedEl) item.classList.add('drag-over'); });
-        item.addEventListener('dragleave',  () => item.classList.remove('drag-over'));
+        item.addEventListener('dragleave',  () => item.classList.remove('drop-left', 'drop-right'));
       });
     }
 
@@ -839,23 +847,37 @@
       if (e.dataTransfer.types.includes('Files')) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
+      if (this === draggedEl) return;
+      // 左右どちら半分にいるか判定してインジケーターを更新
+      const rect = this.getBoundingClientRect();
+      const isLeft = e.clientX < rect.left + rect.width / 2;
+      this.classList.remove('drop-left', 'drop-right');
+      this.classList.add(isLeft ? 'drop-left' : 'drop-right');
     }
 
     function onDrop(e) {
       if (e.dataTransfer.types.includes('Files')) return;
       e.preventDefault();
-      this.classList.remove('drag-over');
+      clearDropIndicators();
       if (this === draggedEl) return;
 
-      const targetId      = this.dataset.id;
-      const oldTargetIdx  = images.findIndex(i => i.id === targetId);
-      const dragSet       = new Set(dragSrcIds);
-      const dragItems     = dragSrcIds.map(id => images.find(i => i.id === id));
+      const targetId     = this.dataset.id;
+      const oldTargetIdx = images.findIndex(i => i.id === targetId);
+
+      // 左半分 → ターゲットの前に挿入、右半分 → ターゲットの後ろに挿入
+      const rect = this.getBoundingClientRect();
+      const insertAfter = e.clientX >= rect.left + rect.width / 2;
+      let insertIdx = insertAfter ? oldTargetIdx + 1 : oldTargetIdx;
+
+      const dragSet   = new Set(dragSrcIds);
+      const dragItems = dragSrcIds.map(id => images.find(i => i.id === id));
+
+      // 挿入位置より前にある移動対象の数だけインデックスを補正
       const removedBefore = images.reduce((n, img, idx) =>
-        n + (dragSet.has(img.id) && idx < oldTargetIdx ? 1 : 0), 0);
+        n + (dragSet.has(img.id) && idx < insertIdx ? 1 : 0), 0);
 
       images = images.filter(i => !dragSet.has(i.id));
-      const newIdx = Math.max(0, Math.min(oldTargetIdx - removedBefore, images.length));
+      const newIdx = Math.max(0, Math.min(insertIdx - removedBefore, images.length));
       images.splice(newIdx, 0, ...dragItems);
 
       selectedIds = new Set(dragSrcIds);
@@ -864,7 +886,7 @@
     }
 
     function onDragEnd() {
-      document.querySelectorAll('.image-item').forEach(i => i.classList.remove('drag-over'));
+      clearDropIndicators();
     }
 
     /* ─────────────────────────────────────────
