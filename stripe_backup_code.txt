@@ -1,3 +1,0 @@
-このコードを入力する前に、必ず dashboard.stripe.com にアクセスしていることを確認してください。Stripe サポート窓口や Stripe の従業員を含め、誰にもコードを伝えないでください。
-
-あなたのコード: eskc-nzif-zqzg-aymz-fjyb
