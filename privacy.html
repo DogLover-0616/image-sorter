@@ -4,178 +4,162 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>プライバシーポリシー — ナラベル</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
-      max-width: 800px;
-      margin: 48px auto;
-      padding: 0 24px 80px;
-      line-height: 1.9;
-      color: #333;
-      font-size: 15px;
-    }
-    h1 { font-size: 1.6rem; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 8px; }
-    .meta { color: #666; font-size: .88rem; margin-bottom: 40px; }
-    h2 { font-size: 1.05rem; margin-top: 36px; margin-bottom: 8px; font-weight: 700; }
-    p, li { margin: 6px 0; }
-    ol, ul { padding-left: 1.5em; }
-    .highlight {
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
-      padding: 12px 18px;
-      margin: 20px 0;
-      font-size: .95rem;
-      border-radius: 0 8px 8px 0;
-    }
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
-    th { background: #f3f4f6; text-align: left; padding: 10px 14px; border: 1px solid #ddd; }
-    td { padding: 10px 14px; border: 1px solid #ddd; vertical-align: top; }
-    footer { margin-top: 60px; border-top: 1px solid #ddd; padding-top: 20px; font-size: .85rem; color: #666; }
-    a { color: #3b82f6; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans JP',sans-serif;background:#f9fafb;color:#374151;line-height:1.8;font-size:15px;}
+
+    .cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);color:white;text-align:center;padding:56px 24px 48px;}
+    .cover-icon{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 20px;box-shadow:0 12px 32px rgba(16,185,129,.4);}
+    .cover h1{font-size:1.8rem;font-weight:700;margin-bottom:8px;}
+    .cover .meta{font-size:.85rem;opacity:.55;margin-top:12px;}
+
+    .content{max-width:800px;margin:0 auto;padding:32px 16px 80px;}
+
+    .back-link{display:inline-flex;align-items:center;gap:6px;color:#6b7280;font-size:.85rem;text-decoration:none;margin-bottom:24px;}
+    .back-link:hover{color:#374151;}
+
+    .card{background:white;border-radius:16px;padding:36px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+
+    .updated{background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:12px 16px;font-size:.88rem;color:#065f46;margin-bottom:32px;}
+
+    h2{font-size:1.1rem;font-weight:700;color:#111827;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #f3f4f6;}
+    h2:first-of-type{margin-top:0;}
+
+    p{margin-bottom:12px;color:#4b5563;}
+    ol,ul{padding-left:20px;margin-bottom:12px;color:#4b5563;}
+    li{margin-bottom:6px;}
+
+    .highlight{background:#f0fdf4;border-left:3px solid #10b981;border-radius:0 8px 8px 0;padding:12px 16px;margin:16px 0;font-size:.9rem;color:#065f46;}
+    .highlight.warn{background:#fef9c3;border-color:#f59e0b;color:#92400e;}
+
+    .service-table{width:100%;border-collapse:collapse;margin:16px 0;}
+    .service-table th{background:#f3f4f6;color:#6b7280;font-size:.8rem;font-weight:600;letter-spacing:.05em;padding:10px 14px;text-align:left;border-bottom:1px solid #e5e7eb;}
+    .service-table td{padding:12px 14px;font-size:.88rem;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:top;}
+    .service-table tr:last-child td{border-bottom:none;}
+
+    footer{text-align:center;color:#9ca3af;font-size:.8rem;padding:32px 16px;}
   </style>
 </head>
 <body>
 
-<h1>プライバシーポリシー</h1>
-<p class="meta">最終更新日：2026年6月11日　／　運営者：T-Tech</p>
-
-<p>
-  T-Tech（以下「運営者」といいます）は、ナラベル（以下「本サービス」といいます）における
-  個人情報の取り扱いについて、以下のとおり定めます。
-</p>
-
-<div class="highlight">
-  <strong>🔒 まず大切なことをお伝えします</strong><br>
-  本サービスにアップロードされた画像ファイルは、あなたのブラウザ内だけで処理されます。
-  画像が運営者のサーバーに送信・保存されることは一切ありません。
+<div class="cover">
+  <div class="cover-icon">🔐</div>
+  <h1>プライバシーポリシー</h1>
+  <div class="meta">ナラベル — T-Hash</div>
 </div>
 
-<h2>第1条（取得する情報）</h2>
-<p>本サービスでは、以下の情報を取得します。</p>
+<div class="content">
+  <a href="index.html" class="back-link">← ログインページに戻る</a>
 
-<table>
-  <tr>
-    <th>取得する情報</th>
-    <th>取得のタイミング</th>
-    <th>目的</th>
-  </tr>
-  <tr>
-    <td>メールアドレス</td>
-    <td>アカウント登録時</td>
-    <td>ログイン認証・本人確認</td>
-  </tr>
-  <tr>
-    <td>デバイスID（※1）</td>
-    <td>初回アクセス時</td>
-    <td>多重ログイン防止</td>
-  </tr>
-  <tr>
-    <td>最終アクセス日時</td>
-    <td>ログイン中</td>
-    <td>セッション管理</td>
-  </tr>
-  <tr>
-    <td>ブラウザ情報（※2）</td>
-    <td>ログイン中</td>
-    <td>セッション管理</td>
-  </tr>
-</table>
+  <div class="card">
+    <div class="updated">📅 最終更新日：2026年6月11日　／　施行日：2026年6月11日</div>
 
-<p style="font-size:.85rem; color:#666;">
-  ※1 デバイスIDはお使いの端末を識別するための番号で、ブラウザに保存されます（個人を特定するものではありません）。<br>
-  ※2 ブラウザの種類・バージョンなどの情報です。氏名・住所などは含まれません。
-</p>
+    <h2>1. 基本方針</h2>
+    <p>T-Hash（以下「運営者」）は、「ナラベル」（以下「本サービス」）の提供にあたり、ユーザーの個人情報を適切に保護することを重要な責務と認識しています。本ポリシーは、個人情報保護法その他関連法令を遵守し、個人情報の取り扱い方針を定めるものです。</p>
 
-<h2>第2条（取得しない情報）</h2>
-<p>本サービスは以下の情報を取得しません。</p>
-<ul>
-  <li>アップロードされた画像・ファイルの内容</li>
-  <li>氏名・住所・電話番号</li>
-  <li>クレジットカード番号（決済はMOSHが処理します）</li>
-</ul>
+    <div class="highlight">
+      🖼️ <strong>画像データについて</strong><br>
+      本サービスでアップロード・処理される画像は、<strong>すべてユーザーのブラウザ内のみで処理</strong>されます。画像データが運営者のサーバーに送信・保存されることは一切ありません。
+    </div>
 
-<h2>第3条（情報の利用目的）</h2>
-<p>取得した情報は以下の目的にのみ使用します。</p>
-<ul>
-  <li>本サービスへのログイン認証</li>
-  <li>多重ログインの防止</li>
-  <li>サービス障害発生時のご連絡</li>
-  <li>利用規約違反への対応</li>
-</ul>
-<p>上記以外の目的で利用する場合は、事前にお知らせし同意を得ます。</p>
+    <h2>2. 収集する個人情報</h2>
+    <p>運営者が収集する情報は以下のとおりです。</p>
+    <ul>
+      <li><strong>メールアドレス</strong>：ログイン認証・お知らせ送信のために収集します</li>
+      <li><strong>ログイン日時・デバイス情報</strong>：多重ログイン防止のため、セッション管理に使用します</li>
+      <li><strong>IPアドレス・ブラウザ情報</strong>：Firebase Authenticationが自動的に記録します（不正アクセス検知のため）</li>
+      <li><strong>支払い情報</strong>：クレジットカード情報はStripeが処理・保管します。運営者はカード番号を取得・保存しません</li>
+    </ul>
 
-<h2>第4条（第三者への提供）</h2>
-<p>
-  運営者は、以下の場合を除き、取得した個人情報を第三者に提供しません。
-</p>
-<ul>
-  <li>ユーザー本人の同意がある場合</li>
-  <li>法令に基づく開示が必要な場合</li>
-</ul>
+    <h2>3. 利用目的</h2>
+    <ol>
+      <li>本サービスのログイン認証・アカウント管理</li>
+      <li>月額料金の請求・決済処理</li>
+      <li>サービスに関する重要なお知らせの送信（料金変更・サービス終了等）</li>
+      <li>不正利用・セキュリティインシデントへの対応</li>
+      <li>サービス改善のための統計的分析（個人を特定しない形で使用）</li>
+    </ol>
 
-<h2>第5条（外部サービスの利用）</h2>
-<p>本サービスは以下の外部サービスを利用しています。それぞれのプライバシーポリシーもご確認ください。</p>
+    <h2>4. 利用する外部サービス</h2>
+    <table class="service-table">
+      <thead>
+        <tr><th>サービス</th><th>利用目的</th><th>プライバシーポリシー</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Firebase Authentication</strong><br><small>Google LLC</small></td>
+          <td>ログイン認証、セッション管理</td>
+          <td><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></td>
+        </tr>
+        <tr>
+          <td><strong>Cloud Firestore</strong><br><small>Google LLC</small></td>
+          <td>セッション情報の保存</td>
+          <td><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></td>
+        </tr>
+        <tr>
+          <td><strong>Stripe</strong><br><small>Stripe, Inc.</small></td>
+          <td>決済処理・請求管理</td>
+          <td><a href="https://stripe.com/jp/privacy" target="_blank" rel="noopener">Stripe プライバシーポリシー</a></td>
+        </tr>
+      </tbody>
+    </table>
 
-<table>
-  <tr>
-    <th>サービス名</th>
-    <th>用途</th>
-    <th>プライバシーポリシー</th>
-  </tr>
-  <tr>
-    <td>Firebase（Google LLC）</td>
-    <td>ログイン認証・セッション管理</td>
-    <td><a href="https://firebase.google.com/support/privacy" target="_blank">Firebase プライバシー</a></td>
-  </tr>
-  <tr>
-    <td>MOSH</td>
-    <td>決済処理・サブスクリプション管理</td>
-    <td><a href="https://mosh.jp/privacy" target="_blank">MOSH プライバシー</a></td>
-  </tr>
-</table>
+    <h2>5. 第三者提供</h2>
+    <p>運営者は、以下の場合を除き、ユーザーの個人情報を第三者に提供しません。</p>
+    <ul>
+      <li>ユーザーの同意がある場合</li>
+      <li>法令に基づき開示が求められた場合</li>
+      <li>人の生命・身体・財産の保護のために必要な場合</li>
+    </ul>
 
-<h2>第6条（ローカルストレージの使用）</h2>
-<p>
-  本サービスは、多重ログイン防止のためにブラウザの「ローカルストレージ」にデバイスIDを保存します。
-  これはCookieと同様の仕組みで、あなたの端末に保存されるデータです。
-  ブラウザの設定から削除することができます。
-</p>
+    <h2>6. Cookie・ローカルストレージの利用</h2>
+    <p>本サービスでは以下の目的でブラウザのストレージ機能を利用します。</p>
+    <ul>
+      <li><strong>ローカルストレージ</strong>：メールアドレスの記憶（任意）、Firebase認証トークンの保持</li>
+      <li><strong>Cookie</strong>：Firebase SDKが認証状態の維持に使用します</li>
+    </ul>
+    <p>ブラウザの設定からCookieを無効にすることができますが、その場合ログイン機能が正常に動作しない場合があります。</p>
 
-<h2>第7条（情報の管理）</h2>
-<p>
-  取得した個人情報はFirebaseのサーバー上で管理され、不正アクセス・紛失・漏洩を防ぐための
-  適切な安全管理措置を講じます。
-</p>
+    <h2>7. データの保管期間</h2>
+    <ul>
+      <li>アカウント情報：退会後30日間保管後、削除します</li>
+      <li>セッション情報：最終ログインから90日後に自動削除されます</li>
+      <li>支払い履歴：法令で定める期間（7年間）保管します</li>
+    </ul>
 
-<h2>第8条（開示・訂正・削除の請求）</h2>
-<p>
-  ユーザーは、自身の個人情報について開示・訂正・削除を請求することができます。
-  下記の問い合わせ先までメールにてご連絡ください。合理的な期間内に対応します。
-</p>
+    <h2>8. 個人情報の開示・訂正・削除</h2>
+    <p>ユーザーは、自己の個人情報について開示・訂正・削除を求めることができます。下記お問い合わせ先までご連絡ください。合理的な期間内（原則14日以内）に対応します。</p>
 
-<h2>第9条（未成年の利用）</h2>
-<p>
-  未成年の方が本サービスをご利用になる場合は、保護者の同意を得た上でご利用ください。
-</p>
+    <h2>9. セキュリティ</h2>
+    <p>運営者は、個人情報への不正アクセス・紛失・改ざん・漏洩を防止するため、以下の対策を実施しています。</p>
+    <ul>
+      <li>Firebase Authentication による認証・セッション管理</li>
+      <li>Firestoreセキュリティルールによるデータアクセス制御（本人のみアクセス可能）</li>
+      <li>APIキーのドメイン制限（許可ドメイン以外からの利用を遮断）</li>
+      <li>通信のHTTPS暗号化</li>
+    </ul>
 
-<h2>第10条（プライバシーポリシーの変更）</h2>
-<p>
-  本ポリシーは必要に応じて変更することがあります。
-  変更後のポリシーはこのページに掲示した時点で効力を生じます。
-</p>
+    <h2>10. 未成年者の個人情報</h2>
+    <p>本サービスは13歳未満の方の利用を想定していません。13歳未満の方が個人情報を提供していることが判明した場合、速やかに削除します。</p>
 
-<h2>第11条（お問い合わせ）</h2>
-<p>本ポリシーに関するお問い合わせは以下までご連絡ください。</p>
-<p>
-  運営者：T-Tech<br>
-  メールアドレス：<a href="mailto:charko.mokomoko@gmail.com">charko.mokomoko@gmail.com</a>
-</p>
+    <h2>11. プライバシーポリシーの変更</h2>
+    <p>本ポリシーは予告なく変更することがあります。重要な変更の場合は登録メールアドレスにお知らせします。変更後も本サービスを継続利用された場合は、変更後のポリシーに同意したものとみなします。</p>
+
+    <h2>12. お問い合わせ</h2>
+    <p>個人情報の取り扱いに関するお問い合わせは下記までご連絡ください。</p>
+    <ul>
+      <li>事業者名：T-Hash</li>
+      <li>メール：<a href="mailto:charko.mokomoko@gmail.com">charko.mokomoko@gmail.com</a></li>
+      <li>対応時間：平日10:00〜18:00（土日祝・年末年始を除く）</li>
+    </ul>
+  </div>
+</div>
 
 <footer>
-  <p>
-    <a href="index.html">トップに戻る</a>　|
-    <a href="terms.html">利用規約</a>
-  </p>
+  &copy; 2026 T-Hash / ナラベル &nbsp;·&nbsp;
+  <a href="terms.html" style="color:#9ca3af;">利用規約</a>
 </footer>
 
 </body>

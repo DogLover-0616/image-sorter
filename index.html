@@ -142,6 +142,60 @@
     .msg.ok { color: var(--ok); }
 
     @media (max-width: 480px) { .card { padding: 24px 18px; } }
+
+    /* ── パスワード変更モーダル ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      place-items: center;
+      padding: 24px;
+    }
+    .modal-overlay.open { display: grid; }
+    .modal {
+      width: 100%; max-width: 400px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+      animation: modal-in .18s ease-out;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(.96) translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .modal-title {
+      font-size: 1.05rem; font-weight: 600; margin: 0 0 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .modal-field { position: relative; margin-bottom: 18px; }
+    .modal-input {
+      width: 100%; padding: 13px 14px;
+      border-radius: 12px; outline: 0;
+      border: 1px solid var(--border);
+      background: rgba(2,6,23,.6);
+      color: var(--text);
+      font-size: 14px; font-family: inherit;
+      transition: .2s border-color, .2s box-shadow, .2s background;
+    }
+    .modal-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 5px var(--ring), 0 8px 24px rgba(59,130,246,.12);
+      background: rgba(2,6,23,.75);
+    }
+    .modal-label {
+      display: block; font-size: .82rem; color: var(--muted);
+      margin-bottom: 5px; letter-spacing: .01em;
+    }
+    .modal-msg {
+      min-height: 18px; font-size: .85rem;
+      margin-bottom: 16px; color: var(--danger);
+    }
+    .modal-btn-row { display: flex; gap: 10px; }
+    .modal-btn-row .btn { margin: 0; }
   </style>
 </head>
 <body>
@@ -183,6 +237,39 @@
       <div class="divider"></div>
       <div id="message" class="msg"></div>
     </form>
+  </div>
+
+  <!-- パスワード変更モーダル -->
+  <div id="changePwModal" class="modal-overlay"
+       role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <p class="modal-title" id="modalTitle">🔑 パスワード変更</p>
+
+      <div class="modal-field">
+        <label class="modal-label" for="modalCurrentPw">現在のパスワード</label>
+        <input id="modalCurrentPw" class="modal-input" type="password"
+               autocomplete="current-password" placeholder="現在のパスワード" />
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label" for="modalNewPw">新しいパスワード（8文字以上）</label>
+        <input id="modalNewPw" class="modal-input" type="password"
+               autocomplete="new-password" placeholder="新しいパスワード" />
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label" for="modalNewPw2">新しいパスワード（確認）</label>
+        <input id="modalNewPw2" class="modal-input" type="password"
+               autocomplete="new-password" placeholder="もう一度入力" />
+      </div>
+
+      <div id="modalMsg" class="modal-msg" role="alert" aria-live="polite"></div>
+
+      <div class="modal-btn-row">
+        <button id="modalSubmitBtn" type="button" class="btn">変更する</button>
+        <button id="modalCancelBtn" type="button" class="btn secondary">キャンセル</button>
+      </div>
+    </div>
   </div>
 
   <!-- Firebase SDK -->
@@ -262,41 +349,80 @@
       }
     });
 
-    // パスワード変更
-    $('#changePwBtn').addEventListener('click', async () => {
-      msg.textContent = '';
-      const inputEmail = emailInput.value.trim();
-      const currentPw = passwordInput.value;
+    // ── パスワード変更モーダル ──
+    const modal        = $('#changePwModal');
+    const modalMsg     = $('#modalMsg');
+    const modalCurrentPw = $('#modalCurrentPw');
+    const modalNewPw   = $('#modalNewPw');
+    const modalNewPw2  = $('#modalNewPw2');
 
+    function openChangePwModal() {
+      const inputEmail = emailInput.value.trim();
       if (!inputEmail && !auth.currentUser) {
         msg.textContent = 'メールアドレスを入力してください。';
         msg.className = 'msg error';
         emailInput.focus();
         return;
       }
-      if (!currentPw) {
-        msg.textContent = '現在のパスワードを入力してください。';
-        msg.className = 'msg error';
-        passwordInput.focus();
-        return;
-      }
+      // モーダルを開く前にフィールドをリセット
+      modalCurrentPw.value = '';
+      modalNewPw.value = '';
+      modalNewPw2.value = '';
+      modalMsg.textContent = '';
+      modal.classList.add('open');
+      modalCurrentPw.focus();
+    }
 
-      const newPw = prompt('新しいパスワードを入力してください（8文字以上推奨）:');
-      if (newPw === null) return;
-      if (newPw.length < 6) {
-        msg.textContent = 'パスワードは6文字以上にしてください。';
-        msg.className = 'msg error';
+    function closeChangePwModal() {
+      modal.classList.remove('open');
+      // セキュリティのためフィールドをクリア
+      modalCurrentPw.value = '';
+      modalNewPw.value = '';
+      modalNewPw2.value = '';
+      modalMsg.textContent = '';
+    }
+
+    // 「パスワード変更」ボタン → モーダルを開く
+    $('#changePwBtn').addEventListener('click', openChangePwModal);
+
+    // キャンセルボタン
+    $('#modalCancelBtn').addEventListener('click', closeChangePwModal);
+
+    // オーバーレイ背景クリックで閉じる
+    modal.addEventListener('click', e => {
+      if (e.target === modal) closeChangePwModal();
+    });
+
+    // Escキーで閉じる
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeChangePwModal();
+    });
+
+    // 「変更する」ボタン → バリデーション＋Firebase処理
+    $('#modalSubmitBtn').addEventListener('click', async () => {
+      modalMsg.textContent = '';
+      const currentPw = modalCurrentPw.value;
+      const newPw     = modalNewPw.value;
+      const newPw2    = modalNewPw2.value;
+
+      if (!currentPw) {
+        modalMsg.textContent = '現在のパスワードを入力してください。';
+        modalCurrentPw.focus();
         return;
       }
-      const newPw2 = prompt('新しいパスワード（確認）を再入力してください:');
-      if (newPw2 === null) return;
+      if (newPw.length < 8) {
+        modalMsg.textContent = '新しいパスワードは8文字以上にしてください。';
+        modalNewPw.focus();
+        return;
+      }
       if (newPw !== newPw2) {
-        msg.textContent = '新しいパスワードが一致しません。';
-        msg.className = 'msg error';
+        modalMsg.textContent = '新しいパスワードが一致しません。';
+        modalNewPw2.focus();
         return;
       }
 
       try {
+        const inputEmail = emailInput.value.trim();
         if (!auth.currentUser) {
           await auth.signInWithEmailAndPassword(inputEmail, currentPw);
         } else {
@@ -305,12 +431,12 @@
           await auth.currentUser.reauthenticateWithCredential(cred);
         }
         await auth.currentUser.updatePassword(newPw);
+        closeChangePwModal();
+        passwordInput.value = '';
         msg.textContent = 'パスワードを変更しました。';
         msg.className = 'msg ok';
-        passwordInput.value = '';
       } catch (err) {
-        msg.textContent = 'パスワード変更に失敗しました。現在のパスワードを確認してください。';
-        msg.className = 'msg error';
+        modalMsg.textContent = 'パスワード変更に失敗しました。現在のパスワードを確認してください。';
       }
     });
 
